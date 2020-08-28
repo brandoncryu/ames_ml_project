@@ -1,0 +1,102 @@
+---
+title: "Stephen's EDA"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r include=FALSE}
+library(tidyverse)
+```
+
+```{r}
+housing = read_csv("data/Ames_Housing_Price_Data.csv")
+housing = select(housing, -1)
+```
+```{r}
+str(housing)
+```
+
+```{r}
+NbhdPrice = housing %>% 
+  group_by(Neighborhood) %>% 
+  summarise(NbhdPrice = mean(SalePrice))
+housing = housing %>% 
+  inner_join(NbhdPrice, by = "Neighborhood")
+housing %>% 
+  ggplot() + geom_boxplot(aes(reorder(Neighborhood, NbhdPrice), SalePrice)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+housing2 = housing %>% 
+  mutate(HasFence = if_else(!is.na(housing$Fence), 1, 0))
+
+ggplot(housing2) + geom_bar(aes(reorder(Neighborhood, NbhdPrice), fill=HasFence)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggplot(housing2) + geom_col(aes(HasFence, NbhdPrice))
+ggplot(housing2) + geom_col(aes(HasFence, SalePrice))
+```
+
+```{r}
+housing[housing$Neighborhood=='Landmrk', ]
+```
+```{r}
+ggplot(housing) + geom_boxplot(aes(Functional, SalePrice))
+```
+
+```{r}
+NA_preproc <- function (dat) {
+  for (j in 1:ncol(dat)) {
+    x <- dat[[j]]
+    if (is.factor(x) && anyNA(x)) dat[[j]] <- base::addNA(x)
+    if (is.character(x)) dat[[j]] <- factor(x, exclude = NULL)
+    }
+  dat
+  }
+```
+
+```{r}
+# data cleaning before search function
+housing = mutate(housing, LogSalePrice = log(SalePrice),
+                 LogGrLivArea = log(GrLivArea))
+housing_char = housing[, sapply(housing, class) == 'character']
+housing_fact = housing[, sapply(housing, class) == 'factor']
+housing_num = housing[, sapply(housing, class) == 'numeric']
+housing3 = data.frame(c(housing_num, housing_fact, lapply(housing_char, as.factor)))
+housing3 = NA_preproc(housing3)
+housing3 = na.omit(housing3)
+housing3 = select(housing3, -'SalePrice', -'GrLivArea', -'PID')
+```
+
+
+```{r}
+# We can use stepwise regression to help automate the variable selection process.
+# Here we define the minimal model, the full model, and the scope of the models
+
+# through which to search:
+model.empty = lm(LogSalePrice ~ 1, data = housing3) #The model with an intercept ONLY.
+model.full = lm(LogSalePrice ~ ., data = housing3) #The model with ALL variables.
+scope = list(lower = formula(model.empty), upper = formula(model.full))
+scope
+```
+
+```{r include=FALSE}
+forwardAIC.empty = step(model.empty, scope, direction = "forward", steps = 20)
+```
+
+```{r}
+summary(forwardAIC.empty)
+```
+
+```{r include=FALSE}
+backwardAIC.full = step(model.full, scope, direction = "backward", steps = 20)
+```
+
+```{r}
+summary(backwardAIC.full)
+```

@@ -17,7 +17,7 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SIMPLEX])
 ##### Initial data handling ########
 
 ### Feature Cleaning ###
-housing = pd.read_csv('../Ames_HousePrice.csv', index_col=0)
+housing = pd.read_csv('./Ames_HousePrice.csv', index_col=0)
 # Remove Outliers
 housing = housing[np.logical_and(housing.SalePrice >= 40000, housing.SalePrice <= 750000)]
 housing = housing[housing.GrLivArea < 4000]
@@ -331,7 +331,7 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
     if "CentralAir" in boolean_features_value:
         CentralAir=1
 
-    buyer_data = [[np.log(GrLivArea_value), np.log(LotArea_value), OverallQual_value, OverallCond_value,Neighborhood_value,BldgType_value,NumBath_value, GarageCars_value,\
+    buyer_data = [[np.log(GrLivArea_value), np.log(LotArea_value), OverallQual_value, OverallCond_value, Neighborhood_value, BldgType_value, NumBath_value, GarageCars_value,\
         HasFinBsmt, HasFinGarage, HasFireplace, HasPorch, HasDeck, AttachedGarage, GreatElectric, GreatHeat, CentralAir]]
     buyer_x = pd.DataFrame(data = buyer_data, columns = model_cols)
     budget = [[budget_value]]
@@ -339,10 +339,10 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
     predicted_price = np.exp(clf.predict(buyer_x)[0])
 
     #search for ways to find a good deal
-    recommendation = []
+    recommendation   = []
     boolean_features = ['HasFinBsmt', 'HasFinGarage', 'HasFireplace', 'HasPorch', 'HasDeck', 'AttachedGarage', 'GreatElectric', 'GreatHeat', 'CentralAir']
-    ordinal_features = ['OverallQual','OverallCond','GarageCars','NumBath','GarageCars']
-    area_features = ['LogGrLivArea', 'LogLotArea']
+    ordinal_features = ['OverallQual','OverallCond','GarageCars','NumBath']
+    area_features    = ['LogGrLivArea', 'LogLotArea']
 
 #     Overbudget!! Lower our cost
     if predicted_price>budget[0]:
@@ -354,7 +354,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
                 updated_price = np.exp(clf.predict(updated_buyer)[0])
                 difference = predicted_price-updated_price
                 append_string = 'Removing ' + feature + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-                recommendation.append(append_string )
+                budget_difference = abs(updated_price-budget_value)
+                recommendation.append([budget_difference, append_string])
 
         for feature in ordinal_features:
             counter = 0
@@ -365,7 +366,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
                 updated_price = np.exp(clf.predict(updated_buyer)[0])
                 difference = predicted_price-updated_price
                 append_string = 'Setting ' + feature + '=' + str(updated_buyer[feature][0]) + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-                recommendation.append(append_string)
+                budget_difference = abs(updated_price-budget_value)
+                recommendation.append([budget_difference, append_string])
         
         for feature in area_features:
             if feature == 'LogGrLivArea':
@@ -381,8 +383,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
                 updated_price = np.exp(clf.predict(updated_buyer)[0])
                 difference = predicted_price-updated_price
                 append_string = 'Setting' + feature_text + '= {:.0f}'.format(new_area) + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-                recommendation.append(append_string)
-
+                budget_difference = abs(updated_price-budget_value)
+                recommendation.append([budget_difference, append_string])
         counter = 0
         while (counter<2) & (updated_buyer['Neighborhood'][0]>1):
             counter=counter +1
@@ -392,7 +394,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
             difference = predicted_price-updated_price
             new_neighborhood = Neighborhood_dict[updated_buyer['Neighborhood'][0]] 
             append_string = 'Look for homes in ' + new_neighborhood + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-            recommendation.append(append_string)
+            budget_difference = abs(updated_price-budget_value)
+            recommendation.append([budget_difference, append_string])
 
         counter = 0
         while (counter<2) & (updated_buyer['BldgType'][0]>1):
@@ -403,7 +406,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
             difference = predicted_price-updated_price
             new_BldgType = BldgType_dict[updated_buyer['BldgType'][0]] 
             append_string = 'Looking for ' + new_BldgType + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-            recommendation.append(append_string)
+            budget_difference = abs(updated_price-budget_value)
+            recommendation.append([budget_difference, append_string])
 
 # You are Under Budget. Increase cost
     if predicted_price<budget[0]:
@@ -415,7 +419,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
                 updated_price = np.exp(clf.predict(updated_buyer)[0])
                 difference = abs(predicted_price-updated_price)
                 append_string = 'Adding ' + feature + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-                recommendation.append(append_string )
+                budget_difference = abs(updated_price-budget_value)
+                recommendation.append([budget_difference, append_string])
 
         for feature in ordinal_features:
             counter = 0
@@ -426,7 +431,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
                 updated_price = np.exp(clf.predict(updated_buyer)[0])
                 difference = abs(predicted_price-updated_price)
                 append_string = 'Setting ' + feature + '=' + str(updated_buyer[feature][0]) + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-                recommendation.append(append_string)
+                budget_difference = abs(updated_price-budget_value)
+                recommendation.append([budget_difference, append_string])
         
         for feature in area_features:
             if feature == 'LogGrLivArea':
@@ -442,7 +448,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
                 updated_price = np.exp(clf.predict(updated_buyer)[0])
                 difference = abs(predicted_price-updated_price)
                 append_string = 'Setting' + feature_text + '= {:.0f}'.format(new_area) + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-                recommendation.append(append_string)
+                budget_difference = abs(updated_price-budget_value)
+                recommendation.append([budget_difference, append_string])
         
         counter = 0
         while (counter<2) & (updated_buyer['Neighborhood'][0]<28):
@@ -453,7 +460,8 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
             difference = abs(predicted_price-updated_price)
             new_neighborhood = Neighborhood_dict[updated_buyer['Neighborhood'][0]] 
             append_string = 'Look for homes in ' + new_neighborhood + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-            recommendation.append(append_string)
+            budget_difference = abs(updated_price-budget_value)
+            recommendation.append([budget_difference, append_string])
 
         counter = 0
         while (counter<2) & (updated_buyer['BldgType'][0]<5):
@@ -464,9 +472,13 @@ def update_recommendations(budget_value,GrLivArea_value, LotArea_value,OverallQu
             difference = abs(predicted_price-updated_price)
             new_BldgType = BldgType_dict[updated_buyer['BldgType'][0]] 
             append_string = 'Looking for ' + new_BldgType + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
-            recommendation.append(append_string)
+            budget_difference = abs(updated_price-budget_value)
+            recommendation.append([budget_difference, append_string])
 
-    return 'Predicted Price: ${0:,.2f}'.format(predicted_price), over_under_budget, html.Ul([html.Li(x) for x in recommendation])
+    recommendation_string = [rec[1] for rec in sorted(recommendation)]
+    print(recommendation_string)
+
+    return 'Predicted Price: ${0:,.2f}'.format(predicted_price), over_under_budget, html.Ol([html.Li(x) for x in recommendation_string[:10]])
 
 if __name__ == '__main__':
     app.run_server(debug=True)

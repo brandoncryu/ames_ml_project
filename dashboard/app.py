@@ -66,6 +66,7 @@ lm.fit(x_train, y_train)
 ##### UI components #####
 app.layout = html.Div(
     children=[
+        html.Br(),
         dbc.Row(
             dbc.Col(
                 html.H1(children='Ames Housing Tool'),
@@ -93,6 +94,7 @@ app.layout = html.Div(
                             min=12789, max=755000,
                             size=200
                         ),
+                        html.Br(),
 
                         dbc.Label("Gross Living Area (ft^2)"),
                         daq.NumericInput(
@@ -101,6 +103,7 @@ app.layout = html.Div(
                             min=334, max=4676,
                             size=200
                         ),
+                        html.Br(),
 
                         dbc.Label("Number of cars in garage"),
                         daq.NumericInput(
@@ -109,6 +112,7 @@ app.layout = html.Div(
                             min=0, max=5,
                             size=200
                         ),
+                        html.Br(),
 
                         dbc.Label("Overall condition"),
                         daq.NumericInput(
@@ -117,6 +121,7 @@ app.layout = html.Div(
                             min=0, max=10,
                             size=200
                         ),
+                        html.Br(),
                         
                         dbc.Label("Overall quality"),
                         daq.NumericInput(
@@ -138,10 +143,12 @@ app.layout = html.Div(
                             value=[],
                             labelStyle={'display': 'inline-block'}
                         ),
+                        html.Br(),
 
                         dbc.Label("Neighborhood"),
                         dcc.Dropdown(
                             id='neighborhood',
+                            clearable=False,
                             options=[
                                 {'label': 'Meadow', 'value': 1},
                                 {'label': 'BrDale', 'value': 2},
@@ -175,25 +182,31 @@ app.layout = html.Div(
                             value=12
                         ),
                     ],
-                    width={"size": 3, "offset": 1}
+                    width={"size": 2, "offset": 1}
+                ),
+                dbc.Col(
+                    [
+                        html.H4(id='predicted_price'),
+                        html.Br(),
+                        html.H4(id='over_under_budget'),
+                        html.Br(),
+                        html.H4('Recommendations:'),
+                        html.Ul(
+                            id='recommendations'
+                        )
+                    ]
+
                 )
             ]
-        ),
-
-        html.Br(),
-        html.Br(),
-
-        dbc.Row(
-            dbc.Col(
-                html.H4(id='predicted_price'),
-                width={"size": 3, "offset": 1}
-            )
         )
 ])
 
 ##### Output functions #####
+
 @app.callback(
     Output(component_id='predicted_price', component_property='children'),
+    Output(component_id='over_under_budget', component_property='children'),
+    Output(component_id='recommendations', component_property='children'),
     [Input(component_id='budget', component_property='value'),
     Input(component_id='GrLivArea', component_property='value'),
     Input(component_id='Garage_Cars', component_property='value'),
@@ -203,13 +216,16 @@ app.layout = html.Div(
     Input(component_id='neighborhood', component_property='value')
     ]
 )
-def update_predicted_price(budget_value,GrLivArea_value, Garage_Cars_value, overall_cond_value,overall_qual_value,boolean_features_value,neighborhood_value):
+def update_recommendations(budget_value,GrLivArea_value, Garage_Cars_value, overall_cond_value,overall_qual_value,boolean_features_value,neighborhood_value):
     Budget = budget_value
     LivArea = GrLivArea_value
     GarageCars =Garage_Cars_value
     OverallQual = overall_qual_value
     OverallCond = overall_cond_value
     Neighborhood = neighborhood_value
+    neighborhood_dict = {1:'MeadowV',2:'BrDale', 3:'IDOTRR', 4:'BrkSide', 5:'OldTown', 6:'Edwards',7:'SWISU', 8:'Landmrk',9: 'Sawyer',\
+                           10:'NPkVill', 11:'Blueste', 12:'NAmes', 13:'Mitchel', 14:'SawyerW', 15:'Gilbert', 16:'NWAmes', 17:'Greens', 18:'Blmngtn',\
+                           19:'CollgCr', 20:'Crawfor', 21:'ClearCr',22: 'Somerst', 23:'Timber',24: 'Veenker', 25:'GrnHill',26: 'StoneBr',27:'NridgHt', 28:'NoRidge'}
     HasGarage = 0
     HasPool = 0
     HasFireplace = 0
@@ -219,7 +235,6 @@ def update_predicted_price(budget_value,GrLivArea_value, Garage_Cars_value, over
         HasPool=1
     if "HasFireplace" in boolean_features_value:
         HasFireplace=1
-    
 
     buyer_data = [[np.log(Budget), LivArea, HasGarage, HasPool, HasFireplace, OverallQual, OverallCond,Neighborhood,GarageCars]]
     buyer = pd.DataFrame(data = buyer_data, columns = keep)
@@ -227,9 +242,81 @@ def update_predicted_price(budget_value,GrLivArea_value, Garage_Cars_value, over
     budget = buyer['LogSalePrice']
     buyer_x = buyer.drop('LogSalePrice', axis=1)
     predicted_price = np.exp(lm.predict(buyer_x)[0])
-    
-    return 'Predicted Price: ${0:,.2f}'.format(predicted_price)
 
+    #search for ways to find a good deal
+    recommendation = []
+    boolean_features = ['HasPool','HasGarage','HasFireplace']
+    ordinal_features = ['OverallQual','OverallCond','GarageCars']
+
+#     Overbudget!! Lower our cost
+    if predicted_price>np.exp(budget[0]):
+        over_under_budget = 'You are over budget. Follow recommendations below to save costs.'
+        for feature in boolean_features:
+            updated_buyer = buyer_x.copy()
+            if updated_buyer[feature][0]>0:
+                updated_buyer[feature]=0
+                updated_price = np.exp(lm.predict(updated_buyer)[0])
+                difference = predicted_price-updated_price
+                append_string = 'Removing ' + feature + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
+                recommendation.append(append_string )
+
+        for feature in ordinal_features:
+            counter = 0
+            while (updated_buyer[feature][0]>1) & (counter<2):
+                updated_buyer = buyer_x.copy()
+                counter=counter +1
+                updated_buyer[feature]=updated_buyer[feature]-counter
+                updated_price = np.exp(lm.predict(updated_buyer)[0])
+                difference = predicted_price-updated_price
+                append_string = 'Setting ' + feature + '=' + str(updated_buyer[feature][0]) + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
+                recommendation.append(append_string)
+        
+        counter = 0
+        while (counter<2) & (updated_buyer['Neighborhood'][0]>1):
+            counter=counter +1
+            updated_buyer = buyer_x.copy()
+            updated_buyer['Neighborhood']=updated_buyer['Neighborhood']-counter
+            updated_price = np.exp(lm.predict(updated_buyer)[0])
+            difference = predicted_price-updated_price
+            new_neighborhood = neighborhood_dict[updated_buyer['Neighborhood'][0]] 
+            append_string = 'Look for homes in ' + new_neighborhood + '-----Savings: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
+            recommendation.append(append_string)
+
+# You are Under Budget. Increase cost
+    if predicted_price<np.exp(budget[0]):
+        over_under_budget = 'You are under budget. Follow recommendations below to increase costs.'
+        for feature in boolean_features:
+            updated_buyer = buyer_x.copy()
+            if updated_buyer[feature][0]==0:
+                updated_buyer[feature]=1
+                updated_price = np.exp(lm.predict(updated_buyer)[0])
+                difference = abs(predicted_price-updated_price)
+                append_string = 'Adding ' + feature + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
+                recommendation.append(append_string )
+
+        for feature in ordinal_features:
+            counter = 0
+            while (updated_buyer[feature][0]<housing[feature].max()) & (counter<2):
+                updated_buyer = buyer_x.copy()
+                counter=counter +1
+                updated_buyer[feature]=updated_buyer[feature]+counter
+                updated_price = np.exp(lm.predict(updated_buyer)[0])
+                difference = abs(predicted_price-updated_price)
+                append_string = 'Setting ' + feature + '=' + str(updated_buyer[feature][0]) + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
+                recommendation.append(append_string)
+        
+        counter = 0
+        while (counter<2) & (updated_buyer['Neighborhood'][0]<28):
+            counter=counter +1
+            updated_buyer = buyer_x.copy()
+            updated_buyer['Neighborhood']=updated_buyer['Neighborhood']+counter
+            updated_price = np.exp(lm.predict(updated_buyer)[0])
+            difference = abs(predicted_price-updated_price)
+            new_neighborhood = neighborhood_dict[updated_buyer['Neighborhood'][0]] 
+            append_string = 'Look for homes in ' + new_neighborhood + '-----Increased cost: ${0:,.2f}'.format(difference) + '-----Predicted Price: ${0:,.2f}'.format(updated_price)
+            recommendation.append(append_string)
+
+    return 'Predicted Price: ${0:,.2f}'.format(predicted_price), over_under_budget, html.Ul([html.Li(x) for x in recommendation])
 
 if __name__ == '__main__':
     app.run_server(debug=True)

@@ -45,8 +45,35 @@ ggplot(housing2) + geom_col(aes(HasFence, SalePrice))
 ```{r}
 housing[housing$Neighborhood=='Landmrk', ]
 ```
+## Data Cleaning for EDA
 ```{r}
-ggplot(housing) + geom_boxplot(aes(Functional, SalePrice))
+housing = housing[housing$Neighborhood != "Landmrk",, ]
+housing = housing[housing$MSZoning %in% c("RL", "RM", "FV", "RH"), ]
+housing = mutate(housing, LogSalePrice = log(SalePrice),
+                 LogGrLivArea = log(GrLivArea))
+housing = housing[housing$LogSalePrice > 10, ]
+housing$Alley = replace_na(housing$Alley, "None")
+housing$BsmtFinSF1 = housing$BsmtFinSF1 + exp(2)
+housing$LogBsmtSF = log(housing$BsmtFinSF1)
+```
+
+# Checking for Significant Relationships
+```{r}
+g = ggplot(housing, aes(GrLivArea, SalePrice))
+g + geom_point(aes(color=as.factor(KitchenAbvGr)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(BedroomAbvGr)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(GarageCars)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(FullBath)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(PavedDrive)), alpha = 0.2)
+g + geom_point(aes(color=as.factor(Alley)), alpha = 0.25)
+```
+
+# Checking for Multi-Collinarity
+
+```{r}
+g = ggplot(housing)
+g + geom_boxplot(aes(Functional, SalePrice))
+g + geom_point(aes(LogGrLivArea, LogBsmtSF))
 ```
 
 ```{r}
@@ -60,10 +87,8 @@ NA_preproc <- function (dat) {
   }
 ```
 
-```{r}
 # data cleaning before search function
-housing = mutate(housing, LogSalePrice = log(SalePrice),
-                 LogGrLivArea = log(GrLivArea))
+```{r}
 housing_char = housing[, sapply(housing, class) == 'character']
 housing_fact = housing[, sapply(housing, class) == 'factor']
 housing_num = housing[, sapply(housing, class) == 'numeric']

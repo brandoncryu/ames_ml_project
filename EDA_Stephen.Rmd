@@ -11,6 +11,7 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 
 ```{r include=FALSE}
 library(tidyverse)
+library(corrplot)
 ```
 
 ```{r}
@@ -52,6 +53,7 @@ housing = housing[housing$MSZoning %in% c("RL", "RM", "FV", "RH"), ]
 housing = mutate(housing, LogSalePrice = log(SalePrice),
                  LogGrLivArea = log(GrLivArea))
 housing = housing[housing$LogSalePrice > 10, ]
+housing = housing[housing$BedroomAbvGr > 0, ]
 housing$Alley = replace_na(housing$Alley, "None")
 housing$BsmtFinSF1 = housing$BsmtFinSF1 + exp(2)
 housing$LogBsmtSF = log(housing$BsmtFinSF1)
@@ -66,14 +68,20 @@ g + geom_point(aes(color=as.factor(GarageCars)), alpha = 0.25)
 g + geom_point(aes(color=as.factor(FullBath)), alpha = 0.25)
 g + geom_point(aes(color=as.factor(PavedDrive)), alpha = 0.2)
 g + geom_point(aes(color=as.factor(Alley)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(round(LogGrLivArea/BedroomAbvGr))), alpha = 0.5)
 ```
 
 # Checking for Multi-Collinarity
 
 ```{r}
-g = ggplot(housing)
-g + geom_boxplot(aes(Functional, SalePrice))
-g + geom_point(aes(LogGrLivArea, LogBsmtSF))
+g2 = ggplot(housing)
+g2 + geom_boxplot(aes(Functional, SalePrice))
+g2 + geom_point(aes(LogGrLivArea, LogBsmtSF))
+g2 + geom_point(aes(LogGrLivArea, BedroomAbvGr))
+g2 + geom_point(aes(TotRmsAbvGrd, BedroomAbvGr))
+cor_mat = cor(housing[, sapply(housing, class) == 'numeric'])
+corrplot(cor_mat, method="circle", type="lower")
+corrplot(cor_mat, method="number", type="lower")
 ```
 
 ```{r}

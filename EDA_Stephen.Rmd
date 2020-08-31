@@ -1,0 +1,135 @@
+---
+title: "Stephen's EDA"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r include=FALSE}
+library(tidyverse)
+library(corrplot)
+```
+
+```{r}
+housing = read_csv("data/Ames_Housing_Price_Data.csv")
+housing = select(housing, -1)
+```
+```{r}
+str(housing)
+```
+
+```{r}
+NbhdPrice = housing %>% 
+  group_by(Neighborhood) %>% 
+  summarise(NbhdPrice = mean(SalePrice))
+housing = housing %>% 
+  inner_join(NbhdPrice, by = "Neighborhood")
+housing %>% 
+  ggplot() + geom_boxplot(aes(reorder(Neighborhood, NbhdPrice), SalePrice)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+housing2 = housing %>% 
+  mutate(HasFence = if_else(!is.na(housing$Fence), 1, 0))
+
+ggplot(housing2) + geom_bar(aes(reorder(Neighborhood, NbhdPrice), fill=HasFence)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggplot(housing2) + geom_col(aes(HasFence, NbhdPrice))
+ggplot(housing2) + geom_col(aes(HasFence, SalePrice))
+```
+
+```{r}
+housing[housing$Neighborhood=='Landmrk', ]
+```
+## Data Cleaning for EDA
+```{r}
+housing = housing[housing$Neighborhood != "Landmrk",, ]
+housing = housing[housing$MSZoning %in% c("RL", "RM", "FV", "RH"), ]
+housing = mutate(housing, LogSalePrice = log(SalePrice),
+                 LogGrLivArea = log(GrLivArea))
+housing = housing[housing$LogSalePrice > 10, ]
+housing = housing[housing$BedroomAbvGr > 0, ]
+housing$Alley = replace_na(housing$Alley, "None")
+housing$BsmtFinSF1 = housing$BsmtFinSF1 + exp(2)
+housing$LogBsmtSF = log(housing$BsmtFinSF1)
+```
+
+# Checking for Significant Relationships
+```{r}
+g = ggplot(housing, aes(GrLivArea, SalePrice))
+g + geom_point(aes(color=as.factor(KitchenAbvGr)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(BedroomAbvGr)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(GarageCars)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(FullBath)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(PavedDrive)), alpha = 0.2)
+g + geom_point(aes(color=as.factor(Alley)), alpha = 0.25)
+g + geom_point(aes(color=as.factor(round(LogGrLivArea/BedroomAbvGr))), alpha = 0.5)
+```
+
+# Checking for Multi-Collinarity
+
+```{r}
+g2 = ggplot(housing)
+g2 + geom_boxplot(aes(Functional, SalePrice))
+g2 + geom_point(aes(LogGrLivArea, LogBsmtSF))
+g2 + geom_point(aes(LogGrLivArea, BedroomAbvGr))
+g2 + geom_point(aes(TotRmsAbvGrd, BedroomAbvGr))
+cor_mat = cor(housing[, sapply(housing, class) == 'numeric'])
+corrplot(cor_mat, method="circle", type="lower")
+corrplot(cor_mat, method="number", type="lower")
+```
+
+```{r}
+NA_preproc <- function (dat) {
+  for (j in 1:ncol(dat)) {
+    x <- dat[[j]]
+    if (is.factor(x) && anyNA(x)) dat[[j]] <- base::addNA(x)
+    if (is.character(x)) dat[[j]] <- factor(x, exclude = NULL)
+    }
+  dat
+  }
+```
+
+# data cleaning before search function
+```{r}
+housing_char = housing[, sapply(housing, class) == 'character']
+housing_fact = housing[, sapply(housing, class) == 'factor']
+housing_num = housing[, sapply(housing, class) == 'numeric']
+housing3 = data.frame(c(housing_num, housing_fact, lapply(housing_char, as.factor)))
+housing3 = NA_preproc(housing3)
+housing3 = na.omit(housing3)
+housing3 = select(housing3, -'SalePrice', -'GrLivArea', -'PID')
+```
+
+
+```{r}
+# We can use stepwise regression to help automate the variable selection process.
+# Here we define the minimal model, the full model, and the scope of the models
+
+# through which to search:
+model.empty = lm(LogSalePrice ~ 1, data = housing3) #The model with an intercept ONLY.
+model.full = lm(LogSalePrice ~ ., data = housing3) #The model with ALL variables.
+scope = list(lower = formula(model.empty), upper = formula(model.full))
+scope
+```
+
+```{r include=FALSE}
+forwardAIC.empty = step(model.empty, scope, direction = "forward", steps = 20)
+```
+
+```{r}
+summary(forwardAIC.empty)
+```
+
+```{r include=FALSE}
+backwardAIC.full = step(model.full, scope, direction = "backward", steps = 20)
+```
+
+```{r}
+summary(backwardAIC.full)
+```

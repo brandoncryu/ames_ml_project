@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from sklearn import linear_model
 from sklearn import model_selection
+import pickle
 
 app = dash.Dash(__name__, 
             meta_tags=[
@@ -35,12 +36,14 @@ y = housing.LogSalePrice
 
 
 ### Train model ###
-x_train, x_test, y_train, y_test = model_selection.train_test_split(x, y, test_size=.2, random_state=0)
+# x_train, x_test, y_train, y_test = model_selection.train_test_split(x, y, test_size=.2, random_state=0)
 
-clf = linear_model.Lasso(alpha=9.326033468832199e-05)
-clf.fit(x_train, y_train)
+# clf = linear_model.Lasso(alpha=9.326033468832199e-05)
+# clf.fit(x_train, y_train)
 
-# 
+clf = pickle.load( open("linear_model.pkl", "rb"))
+
+# Function to update price, calculate differences
 def get_price_diff(updated_buyer,predicted,budget):
     updated_price = np.exp(clf.predict(updated_buyer)[0])
     difference = abs(predicted-updated_price)
@@ -66,7 +69,7 @@ app.layout = html.Div(
         ),
         dbc.Row(
             dbc.Col(
-                html.P(children='This tool uses a lasso-penalized linear model trained with housing sales data from Ames, IA from 2016~2010.'),
+                html.P(children='This tool uses a multiple linear model trained with housing sales data from Ames, IA from 2016~2010.'),
                 width={"size": 6}
             )
         ),
@@ -96,7 +99,7 @@ app.layout = html.Div(
                                 daq.NumericInput(
                                     id='GrLivArea',
                                     value=1000,
-                                    min=334, max=4676,
+                                    min=440, max=3820,
                                     size=200
                                 ),
                                 dbc.FormText(
@@ -108,7 +111,7 @@ app.layout = html.Div(
                                 daq.NumericInput(
                                     id='LotArea',
                                     value=1000,
-                                    min=0, max=215000,
+                                    min=1300, max=215000,
                                     size=200
                                 ),
                                 dbc.FormText(

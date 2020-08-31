@@ -25,23 +25,15 @@ app.title = 'Ames Housing Tool'
 # Import clean data 
 housing = pd.read_pickle('./housing_data.pkl')
 
-# Feature Selection
+# Define feature names
 model_cols = [ 'LogGrLivArea', 'LogLotArea', 'OverallQual', 'OverallCond',
        'Neighborhood', 'BldgType', 'NumBath', 'GarageCars', 
        'Finished Basement','Finished Garage', 'Fire Place', 'Porch', 'Deck', 'Attached Garage',
        'Great Electric', 'Great Heat', 'Central Air']
 
-x = housing[model_cols]
-y = housing.LogSalePrice
-
-
-### Train model ###
-# x_train, x_test, y_train, y_test = model_selection.train_test_split(x, y, test_size=.2, random_state=0)
-
-# clf = linear_model.Lasso(alpha=9.326033468832199e-05)
-# clf.fit(x_train, y_train)
-
+# Import model
 clf = pickle.load( open("linear_model.pkl", "rb"))
+
 
 # Function to update price, calculate differences
 def get_price_diff(updated_buyer,predicted,budget):

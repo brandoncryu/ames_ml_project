@@ -31,6 +31,11 @@ housing = housing %>%
 housing %>% 
   ggplot() + geom_boxplot(aes(reorder(Neighborhood, NbhdPrice), SalePrice)) + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+housing %>% 
+  group_by(Neighborhood) %>% 
+  summarise(NbhdPrice = median(SalePrice), NbhdQual = mean(OverallQual)) %>% 
+  mutate(Status=ifelse(NbhdPrice > 160000, "Rich", "Poor")) %>% 
+  ggplot() + geom_point(aes(NbhdQual, NbhdPrice, color=Status)) + ggtitle("Neighborhood Price Sensitivity with Respect to Quality") + ylab("Median Price") + xlab("Mean Quality")
 ```
 
 ```{r}

@@ -17,4 +17,4 @@ The dataset used in this project is from https://www.kaggle.com/prevek18/ames-ho
 
 * dashboard folder contains code related to deploying our linear model to production
 
-** our deployed model can be accessed through this address: https://ames-housing-app.herokuapp.com/
+* our deployed model can be accessed through this address: https://ames-housing-app.herokuapp.com/

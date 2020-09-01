@@ -103,7 +103,7 @@ app.layout = html.Div(
                                 daq.NumericInput(
                                     id='LotArea',
                                     value=1000,
-                                    min=1300, max=215000,
+                                    min=0, max=215000,
                                     size=200
                                 ),
                                 dbc.FormText(

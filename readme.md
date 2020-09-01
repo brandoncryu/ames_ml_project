@@ -7,7 +7,7 @@ This project aims to understand relationships between house features and sale pr
 The dataset used in this project is from https://www.kaggle.com/prevek18/ames-housing-dataset?rvi=1.
 
 ## Content:
-* "data" folder contains datasets used for this project.
+* data folder contains datasets used for this project.
 
 * Stephen_model.ipynb is a jupyter notebook for linear models
 

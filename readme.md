@@ -9,12 +9,12 @@ The dataset used in this project is from https://www.kaggle.com/prevek18/ames-ho
 ## Content:
 * data folder contains datasets used for this project.
 
+* dashboard folder contains code related to deploying our linear model to production. https://ames-housing-app.herokuapp.com/
+
+* Neighborhood Analysis_Properties Lat Long.ipynb merges housing sales with lat long data
+
 * Stephen_model.ipynb is a jupyter notebook for linear models
 
 * Gathered_EDA.ipynb contains exploratory data analysis done for this project.
 
-* 'Tree Models Final.ipynb' contains code for tree based models
-
-* dashboard folder contains code related to deploying our linear model to production
-
-* our deployed model can be accessed through this address: https://ames-housing-app.herokuapp.com/
+* Tree Models Final.ipynb contains code for tree based models
